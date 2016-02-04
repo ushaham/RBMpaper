@@ -59,20 +59,27 @@ f = Z';
 y = y';
     
 disp 'estimating posterior probabilities'
-% compute approximate posterior $p(y|x) for the first 1000 vectors in
-% bigData
-num = 200;
-posterior = zeros(num,1);
-for i=1:num
-   disp(i)
-   v = Z(i,:);
-   inds = find(ismember(Z,v,'rows'));
-   posterior(i) = mean(y(inds));   
+a = (0:14)';
+b = 2.^a;
+counts = zeros(2^15,2);
+for i = 1:10^6
+   x =  Z(i,:);
+   label = y(i);
+   ind = x*b + 1;
+   counts(ind, label+1) = counts(ind, label+1)+1;
 end
-BayesAcc = mean(round(posterior)==y(1:num));
+
+preds = zeros(10000,1);
+for i=1:10000
+   disp(i)
+   x = Z(i,:);
+   ind = x*b +1;
+   preds(i) = counts(ind,2)>counts(ind,1);
+end
+BayesAcc = mean(preds==y(1:10000));
 fprintf('Bayes accuracy: %2.2f \n' ,BayesAcc);
 
 str = strcat('datasets/simulated/TG/model.mat');
     save(str, 'BayesAcc', 'MU', 'SIGMA')
     
-% Bayes error: 0.85     
+% Bayes error: 0.91        
