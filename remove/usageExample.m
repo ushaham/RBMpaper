@@ -1,10 +1,11 @@
 close all; clc; clear;
 %% read data
 
-datasetName = 'dataset1.mat';% path to dataset file.
+datasetName = '';% path to dataset file.
 % the dataset needs to be a .mat file, with a binary matrix f of size d x n 
 % and (optionally, a binary label vector y). 
-data = readData(datasetName);
+iDivideData = 0;
+data = readData2a(datasetName, iDivideData);
 
 %% setup
 rbmInput.restart=1;
@@ -12,16 +13,16 @@ rbmInput.restart=1;
 % the following are configurable hyperparameters for RBM
 
 rbmInput.reg_type = 'l2';
-rbmInput.weightPenalty = 1e-2; %\ell_2 weight penalty
+rbmInput.weightPenalty = 1e-2;%1e-2 % also can try 0, will give deeper net, but better accuracy 
 weightPenaltyOrg = rbmInput.weightPenalty;
 rbmInput.epsilonw      = 5e-2;%5e-2 % Learning rate for weights 
 rbmInput.epsilonvb     = 5e-2;%5e-2 % Learning rate for biases of visible units 
 rbmInput.epsilonhb     = 5e-2;%5e-2 % Learning rate for biases of hidden units 
-rbmInput.CD=10;   % number of contrastive divergence iterations
-rbmInput.initialmomentum  = 0;
-rbmInput.finalmomentum    = 0.9;
-rbmInput.maxEpoch = 150;
-rbmInput.decayLrAfter = 120;
+rbmInput.CD=10;   
+rbmInput.initialmomentum  = 0;%0;
+rbmInput.finalmomentum    = 0.9;%0.9;
+rbmInput.maxEpoch = 150; %100
+rbmInput.decayLrAfter = 120; % 95
 rbmInput.decayMomentumAfter = 90; % when to switch from initial to final momentum
 rbmInput.iIncreaseCD = 0;
 % monitor free energy and likelihood change (on validation set) with time
@@ -31,14 +32,26 @@ rbmInput.iMonitor = 1;
 %% train
 sizes = [];
 rbmInput.data = data;
-rbmInput.numhid = size(data.allDataTable,2);
+rbmInput.numhid = size(data.allDataTable,2); % non-configurable for RBM1
 stack = cell(1,1);
 layerCounter = 1;
 addLayers = 1;
 while addLayers
     % train RBM
+    A = rbmInput.data.allDataTable;
+    y = rbmInput.data.labels;
+    c1 = corr(A(y==0,:));
+    figure
+    imagesc(c1)
+    h = colorbar;
+    caxis([-.2,1])
+    %title ('conditional correlation matrix, class = 0')
+    set(gca, 'fontsize', 15)
+    set(gca,'xtick',0:((length(c1)>5)+1):length(c1));
+    set(gca,'ytick',0:((length(c1)>5)+1):length(c1));
+    
     rbmInput.weightPenalty = weightPenaltyOrg;
-    rbmOutput = rbm(rbmInput);
+    rbmOutput = rbmV2(rbmInput);
     % collect params
     stack{layerCounter}.vishid = rbmOutput.vishid;
     stack{layerCounter}.hidbiases = rbmOutput.hidbiases;
@@ -50,13 +63,13 @@ while addLayers
     numhid = min(find(cumsum(diag(D))/sum(diag(D))>0.95));
     fprintf ('need %1.0f hidden units\n', numhid);
     disp 'paused, press any key to continue'
-    pause;
+    %pause;
 
     % Re-train RBM
     sizes = [sizes, numhid];
     rbmInput.numhid = numhid;
     rbmInput.weightPenalty = 0;%rbmInput.weightPenalty/10;
-    rbmOutput = rbm(rbmInput);
+    rbmOutput = rbmV2(rbmInput);
     % collect params
     stack{layerCounter}.vishid = rbmOutput.vishid;
     stack{layerCounter}.hidbiases = rbmOutput.hidbiases;
@@ -64,7 +77,7 @@ while addLayers
     figure
     imagesc(stack{layerCounter}.vishid)
     colorbar;
-    title (strcat('weight matrix of RBM ', num2str(layerCounter)));
+    %title (strcat('weight matrix of RBM ', num2str(layerCounter)));
     xlabel(' hidden units')
     ylabel('visible units')
     set(gca,'ytick',0:((size(stack{layerCounter}.vishid,1)>5)+1):size(stack{layerCounter}.vishid,1));

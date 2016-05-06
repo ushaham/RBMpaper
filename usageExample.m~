@@ -37,6 +37,18 @@ layerCounter = 1;
 addLayers = 1;
 while addLayers
     % train RBM
+%    A = rbmInput.data.allDataTable;
+%    y = rbmInput.data.labels;
+%     c1 = corr(A(y==0,:));
+%     figure
+%     imagesc(c1)
+%     h = colorbar;
+%     caxis([-.2,1])
+%     %title ('conditional correlation matrix, class = 0')
+%     set(gca, 'fontsize', 15)
+%     set(gca,'xtick',0:((length(c1)>5)+1):length(c1));
+%     set(gca,'ytick',0:((length(c1)>5)+1):length(c1));
+    
     rbmInput.weightPenalty = weightPenaltyOrg;
     rbmOutput = rbm(rbmInput);
     % collect params
@@ -50,13 +62,13 @@ while addLayers
     numhid = min(find(cumsum(diag(D))/sum(diag(D))>0.95));
     fprintf ('need %1.0f hidden units\n', numhid);
     disp 'paused, press any key to continue'
-    pause;
+    %pause;
 
     % Re-train RBM
     sizes = [sizes, numhid];
     rbmInput.numhid = numhid;
     rbmInput.weightPenalty = 0;%rbmInput.weightPenalty/10;
-    rbmOutput = rbm(rbmInput);
+    rbmOutput = rbmV2(rbmInput);
     % collect params
     stack{layerCounter}.vishid = rbmOutput.vishid;
     stack{layerCounter}.hidbiases = rbmOutput.hidbiases;
@@ -64,7 +76,7 @@ while addLayers
     figure
     imagesc(stack{layerCounter}.vishid)
     colorbar;
-    title (strcat('weight matrix of RBM ', num2str(layerCounter)));
+    %title (strcat('weight matrix of RBM ', num2str(layerCounter)));
     xlabel(' hidden units')
     ylabel('visible units')
     set(gca,'ytick',0:((size(stack{layerCounter}.vishid,1)>5)+1):size(stack{layerCounter}.vishid,1));
